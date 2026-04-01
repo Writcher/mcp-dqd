@@ -117,6 +117,8 @@ const httpServer = http.createServer(async (req, res) => {
   const url = new URL(req.url!, `http://${req.headers.host}`);
   const method = req.method ?? "GET";
 
+  console.log(`[HTTP] ${method} ${url.pathname} (auth: ${req.headers["authorization"] ? "present" : "none"})`);
+
   // 1. Protected Resource Metadata — Claude lo llama primero ante un 401
   if (url.pathname === "/.well-known/oauth-protected-resource") {
     return json(res, 200, {
@@ -209,6 +211,8 @@ const httpServer = http.createServer(async (req, res) => {
     const authHeader = req.headers["authorization"] ?? "";
     const token = authHeader.replace("Bearer ", "");
     const usuario = verificarToken(token);
+
+    console.log(`[MCP] Hit endpoint. Path match: /${process.env.SECRET_PATH}. Auth header: "${authHeader.substring(0, 30)}...". Token válido: ${!!usuario}`);
 
     if (!usuario) {
       res.writeHead(401, {
