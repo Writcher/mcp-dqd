@@ -68,7 +68,7 @@ const httpServer = http.createServer(async (req, res) => {
   // 1. Protected Resource Metadata
   if (url.pathname.startsWith("/.well-known/oauth-protected-resource")) {
     return json(res, 200, {
-      resource: process.env.BASE_URL,
+      resource: `${process.env.BASE_URL}/${process.env.PATH_URL}`,
       authorization_servers: [process.env.BASE_URL],
       bearer_methods_supported: ["header"],
     });
