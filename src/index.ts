@@ -152,7 +152,9 @@ const httpServer = http.createServer(async (req, res) => {
   if (url.pathname === "/oauth/authorize" && method === "GET") {
     const redirectUri = url.searchParams.get("redirect_uri") ?? "";
     const clientState = url.searchParams.get("state") ?? "";
-    const { location } = await generarUrlAzure(redirectUri, clientState);
+    const clientCodeChallenge = url.searchParams.get("code_challenge") ?? "";
+    console.log(`[OAuth] Authorize: redirect_uri=${redirectUri}, code_challenge=${clientCodeChallenge ? "present" : "MISSING"}`);
+    const { location } = await generarUrlAzure(redirectUri, clientState, clientCodeChallenge);
     res.writeHead(302, { Location: location });
     return res.end();
   }
@@ -168,8 +170,8 @@ const httpServer = http.createServer(async (req, res) => {
       return res.end("Error de autenticación. Intentá de nuevo.");
     }
 
-    const authCode = generarAuthCode(result.email);
-    console.log(`[OAuth] Login exitoso: ${result.email}`);
+    const authCode = generarAuthCode(result.email, result.codeChallenge);
+    console.log(`[OAuth] Login exitoso: ${result.email}, code_challenge guardado: ${result.codeChallenge ? "sí" : "NO"}`);
 
     const redirect = new URL(result.redirectUri);
     redirect.searchParams.set("code", authCode);
@@ -183,13 +185,18 @@ const httpServer = http.createServer(async (req, res) => {
     const raw = await leerBody(req);
     const params = new URLSearchParams(raw);
     const code = params.get("code") ?? "";
+    const codeVerifier = params.get("code_verifier") ?? "";
 
-    const email = canjearAuthCode(code);
+    console.log(`[OAuth] Token exchange: code=${code ? "present" : "MISSING"}, code_verifier=${codeVerifier ? "present" : "MISSING"}, grant_type=${params.get("grant_type")}`);
+
+    const email = await canjearAuthCode(code, codeVerifier);
     if (!email) {
+      console.log(`[OAuth] Token exchange FALLÓ: code inválido o PKCE no coincide`);
       return json(res, 400, { error: "invalid_grant" });
     }
 
     const token = generarToken(email);
+    console.log(`[OAuth] Token emitido para: ${email}`);
     return json(res, 200, {
       access_token: token,
       token_type: "Bearer",

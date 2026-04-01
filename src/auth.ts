@@ -9,15 +9,16 @@ const CLIENT_ID = process.env.AZURE_CLIENT_ID!;
 const CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET!;
 const BASE_URL = process.env.BASE_URL!;
 
-// State temporal: azureState → { redirectUri, codeVerifier, clientState }
+// State temporal: azureState → { redirectUri, codeVerifier, clientState, clientCodeChallenge }
 const pendingStates = new Map<string, {
   redirectUri: string;
   codeVerifier: string;
   clientState: string;
+  clientCodeChallenge: string;
 }>();
 
-// Codes temporales: code → email
-const authCodes = new Map<string, { email: string; expira: number }>();
+// Codes temporales: code → email + PKCE challenge del cliente
+const authCodes = new Map<string, { email: string; expira: number; codeChallenge: string }>();
 
 // DCR: clientes registrados dinámicamente (Claude se registra acá)
 const registeredClients = new Map<string, { redirectUris: string[] }>();
@@ -65,13 +66,14 @@ export function registrarCliente(body: Record<string, any>): Record<string, any>
 
 export async function generarUrlAzure(
   redirectUri: string,
-  clientState: string
+  clientState: string,
+  clientCodeChallenge: string
 ): Promise<{ location: string }> {
   const azureState = crypto.randomUUID();
   const codeVerifier = randomBase64url(32);
   const codeChallenge = await sha256(codeVerifier);
 
-  pendingStates.set(azureState, { redirectUri, codeVerifier, clientState });
+  pendingStates.set(azureState, { redirectUri, codeVerifier, clientState, clientCodeChallenge });
   setTimeout(() => pendingStates.delete(azureState), 10 * 60 * 1000);
 
   const params = new URLSearchParams({
@@ -94,7 +96,7 @@ export async function generarUrlAzure(
 export async function manejarCallback(
   code: string,
   azureState: string
-): Promise<{ redirectUri: string; clientState: string; email: string } | null> {
+): Promise<{ redirectUri: string; clientState: string; email: string; codeChallenge: string } | null> {
   const pending = pendingStates.get(azureState);
   if (!pending) return null;
   pendingStates.delete(azureState);
@@ -127,22 +129,30 @@ export async function manejarCallback(
   const claims = JSON.parse(Buffer.from(payload, "base64url").toString());
   const email: string = claims.preferred_username ?? claims.email ?? claims.upn;
 
-  return { redirectUri: pending.redirectUri, clientState: pending.clientState, email };
+  return { redirectUri: pending.redirectUri, clientState: pending.clientState, email, codeChallenge: pending.clientCodeChallenge };
 }
 
 // --- Auth codes -------------------------------------------------------------
 
-export function generarAuthCode(email: string): string {
+export function generarAuthCode(email: string, codeChallenge: string): string {
   const code = crypto.randomUUID();
-  authCodes.set(code, { email, expira: Date.now() + 5 * 60 * 1000 });
+  authCodes.set(code, { email, expira: Date.now() + 5 * 60 * 1000, codeChallenge });
   return code;
 }
 
-export function canjearAuthCode(code: string): string | null {
+export async function canjearAuthCode(code: string, codeVerifier: string): Promise<string | null> {
   const entry = authCodes.get(code);
   if (!entry) return null;
   if (Date.now() > entry.expira) { authCodes.delete(code); return null; }
   authCodes.delete(code);
+
+  // Validar PKCE: hash del code_verifier debe coincidir con el code_challenge guardado
+  const expectedChallenge = await sha256(codeVerifier);
+  if (expectedChallenge !== entry.codeChallenge) {
+    console.log(`[OAuth] PKCE falló: challenge esperado=${entry.codeChallenge}, recibido=${expectedChallenge}`);
+    return null;
+  }
+
   return entry.email;
 }
 
