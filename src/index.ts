@@ -207,12 +207,12 @@ const httpServer = http.createServer(async (req, res) => {
   }
 
   // 7. MCP endpoint
-  if (url.pathname === `/${process.env.SECRET_PATH}` && ["POST", "GET", "DELETE"].includes(method)) {
+  if (url.pathname === `/${process.env.PATH_URL}` && ["POST", "GET", "DELETE"].includes(method)) {
     const authHeader = req.headers["authorization"] ?? "";
     const token = authHeader.replace("Bearer ", "");
     const usuario = verificarToken(token);
 
-    console.log(`[MCP] Hit endpoint. Path match: /${process.env.SECRET_PATH}. Auth header: "${authHeader.substring(0, 30)}...". Token válido: ${!!usuario}`);
+    console.log(`[MCP] Hit endpoint. Path match: /${process.env.PATH_URL}. Auth header: "${authHeader.substring(0, 30)}...". Token válido: ${!!usuario}`);
 
     if (!usuario) {
       res.writeHead(401, {
@@ -242,7 +242,7 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
-  console.log(`[404] No matcheó: ${method} ${url.pathname} (esperado MCP: /${process.env.SECRET_PATH})`);
+  console.log(`[404] No matcheó: ${method} ${url.pathname} (esperado MCP: /${process.env.PATH_URL})`);
   res.writeHead(404);
   res.end();
 });
@@ -250,5 +250,5 @@ const httpServer = http.createServer(async (req, res) => {
 const PORT = parseInt(process.env.PORT || "3000");
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`MCP asistencia corriendo en http://0.0.0.0:${PORT}`);
-  console.log(`[DEBUG] SECRET_PATH="${process.env.SECRET_PATH}" → ruta esperada: "/${process.env.SECRET_PATH}"`);
+  console.log(`[DEBUG] PATH_URL="${process.env.PATH_URL}" → ruta esperada: "/${process.env.PATH_URL}"`);
 });
