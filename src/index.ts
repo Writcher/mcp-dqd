@@ -104,7 +104,7 @@ ${SCHEMA_DESCRIPTION}`,
 // --- HTTP Server --------------------------------------------------------------
 
 const httpServer = http.createServer(async (req, res) => {
-  if (req.url === "/mcp" && ["POST", "GET", "DELETE"].includes(req.method ?? "")) {
+  if (req.url === `/${process.env.SECRET_PATH}` && ["POST", "GET", "DELETE"].includes(req.method ?? "")) {
     const server = new McpServer({ name: "mcp-asistencia", version: "1.0.0" });
     registrarTools(server);
     const transport = new StreamableHTTPServerTransport({
