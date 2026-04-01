@@ -66,7 +66,7 @@ const httpServer = http.createServer(async (req, res) => {
   console.log(`[HTTP] ${method} ${url.pathname} (auth: ${req.headers["authorization"] ? "present" : "none"})`);
 
   // 1. Protected Resource Metadata
-  if (url.pathname === "/.well-known/oauth-protected-resource") {
+  if (url.pathname.startsWith("/.well-known/oauth-protected-resource")) {
     return json(res, 200, {
       resource: process.env.BASE_URL,
       authorization_servers: [process.env.BASE_URL],
@@ -75,7 +75,7 @@ const httpServer = http.createServer(async (req, res) => {
   }
 
   // 2. Authorization Server Metadata
-  if (url.pathname === "/.well-known/oauth-authorization-server") {
+  if (url.pathname.startsWith("/.well-known/oauth-authorization-server")) {
     return json(res, 200, {
       issuer: process.env.BASE_URL,
       authorization_endpoint: `${process.env.BASE_URL}/oauth/authorize`,
@@ -88,7 +88,10 @@ const httpServer = http.createServer(async (req, res) => {
   }
 
   // 3. Dynamic Client Registration
-  if (url.pathname === "/oauth/register" && method === "POST") {
+  if (
+    (url.pathname === "/oauth/register" || url.pathname === "/register") &&
+    method === "POST"
+  ) {
     const raw = await leerBody(req);
     const body = JSON.parse(raw);
     const client = registrarCliente(body);
@@ -97,7 +100,10 @@ const httpServer = http.createServer(async (req, res) => {
   }
 
   // 4. Authorize
-  if (url.pathname === "/oauth/authorize" && method === "GET") {
+  if (
+    (url.pathname === "/oauth/authorize" || url.pathname === "/authorize") &&
+    method === "GET"
+  ) {
     const redirectUri = url.searchParams.get("redirect_uri") ?? "";
     const clientState = url.searchParams.get("state") ?? "";
     const clientCodeChallenge = url.searchParams.get("code_challenge") ?? "";
@@ -128,7 +134,10 @@ const httpServer = http.createServer(async (req, res) => {
   }
 
   // 6. Token exchange
-  if (url.pathname === "/oauth/token" && method === "POST") {
+  if (
+    (url.pathname === "/oauth/token" || url.pathname === "/token") &&
+    method === "POST"
+  ) {
     const raw = await leerBody(req);
     const params = new URLSearchParams(raw);
     const code = params.get("code") ?? "";
