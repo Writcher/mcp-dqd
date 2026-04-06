@@ -62,9 +62,9 @@ ${Object.entries(proyectos).map(([k, v]) => `  ${k}: ${v.length ? v.join(", ") :
 
   server.tool(
     "jornadas_consulta",
-    `FUENTE SECUNDARIA — Ejecuta una consulta SELECT de solo lectura contra la base de datos de jornadas/horas del sistema de RRHH (PostgreSQL).
-Esta base es complementaria a asistencia_consulta. Usala para consultar horas trabajadas, jornadas, horas extra, horas nocturnas, ausencias, quincenas, importaciones de marcas, etc.
-IMPORTANTE: Ante discrepancias entre esta base y asistencia_consulta, la fuente autoritativa es asistencia_consulta (SQL Server).
+    `Ejecuta una consulta SELECT de solo lectura contra la base de datos de jornadas/horas del sistema de RRHH (PostgreSQL).
+Usala para consultar horas trabajadas, jornadas, horas extra (50%, 100%, nocturnas, feriado), detalles de ausencias (tipo de ausencia, justificación), quincenas, importaciones de marcas, etc.
+IMPORTANTE: Para saber quién está presente o ausente hoy, usá asistencia_consulta (SQL Server) que tiene las marcas de los relojes en tiempo real. Esta base es la indicada para el detalle de las ausencias (tipo, justificación) y el desglose de horas.
 
 ${config.jornadas_schema_description}`,
     { query: z.string().describe("Consulta SQL SELECT a ejecutar. Solo se permiten SELECT.") },
@@ -94,8 +94,8 @@ ${config.jornadas_schema_description}`,
 
   server.tool(
     "asistencia_consulta",
-    `FUENTE PRINCIPAL / AUTORITATIVA — Ejecuta una consulta SELECT de solo lectura contra la base de datos de asistencia (SQL Server).
-Esta es la fuente de verdad para asistencia, presentes, ausentes, empleados, nómina, etc. Ante cualquier discrepancia con jornadas_consulta, prevalece esta base.
+    `FUENTE DE VERDAD PARA PRESENCIA — Ejecuta una consulta SELECT de solo lectura contra la base de datos de asistencia (SQL Server).
+Usá esta herramienta para saber quién está presente, quién ausente, marcaciones de relojes, nómina de empleados, etc. Esta es la fuente autoritativa para presencia/ausencia. Para el detalle de ausencias (tipo, justificación) y desglose de horas trabajadas, usá jornadas_consulta.
 
 ${schemaDescription}`,
     { query: z.string().describe("Consulta SQL SELECT a ejecutar. Solo se permiten SELECT.") },
