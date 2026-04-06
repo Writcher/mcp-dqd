@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import sql from "mssql";
+import pg from "pg";
 import { z } from "zod";
 import * as dotenv from "dotenv";
 
@@ -18,9 +19,21 @@ async function getPool() {
   return sql.connect(dbConfig);
 }
 
+const pgConfig: pg.PoolConfig = {
+  host: process.env.PSQL_DB_HOST!,
+  port: parseInt(process.env.PSQL_DB_PORT || "5432"),
+  database: process.env.PSQL_DB_DATABASE!,
+  user: process.env.PSQL_DB_USERNAME!,
+  password: process.env.PSQL_DB_PASSWORD!,
+  ssl: { rejectUnauthorized: false },
+};
+
+const pgPool = new pg.Pool(pgConfig);
+
 export interface AsistenciaConfig {
   proyectos: Record<string, string[]>;
   schema_description: string;
+  jornadas_schema_description: string;
 }
 
 export function registrarModuloAsistencia(
@@ -48,9 +61,41 @@ ${Object.entries(proyectos).map(([k, v]) => `  ${k}: ${v.length ? v.join(", ") :
   );
 
   server.tool(
+    "jornadas_consulta",
+    `FUENTE SECUNDARIA — Ejecuta una consulta SELECT de solo lectura contra la base de datos de jornadas/horas del sistema de RRHH (PostgreSQL).
+Esta base es complementaria a asistencia_consulta. Usala para consultar horas trabajadas, jornadas, horas extra, horas nocturnas, ausencias, quincenas, importaciones de marcas, etc.
+IMPORTANTE: Ante discrepancias entre esta base y asistencia_consulta, la fuente autoritativa es asistencia_consulta (SQL Server).
+
+${config.jornadas_schema_description}`,
+    { query: z.string().describe("Consulta SQL SELECT a ejecutar. Solo se permiten SELECT.") },
+    async ({ query }) => {
+      if (!tienePermiso) return { content: [{ type: "text", text: MSG_SIN_PERMISO }] };
+
+      const trimmed = query.trim();
+      if (!/^SELECT\b/i.test(trimmed)) {
+        return { content: [{ type: "text", text: "Error: Solo se permiten consultas SELECT." }], isError: true };
+      }
+      if (/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|MERGE|GRANT|REVOKE|DENY)\b/i.test(trimmed)) {
+        return { content: [{ type: "text", text: "Error: La consulta contiene operaciones no permitidas." }], isError: true };
+      }
+
+      console.log(`[SQL-PG] ${usuario} → ${trimmed}`);
+
+      try {
+        const result = await pgPool.query(trimmed);
+        return {
+          content: [{ type: "text", text: JSON.stringify({ filas: result.rowCount, datos: result.rows }) }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: `Error SQL: ${err.message}` }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
     "asistencia_consulta",
-    `Ejecuta una consulta SELECT de solo lectura contra la base de datos de asistencia.
-Usá esta herramienta para responder cualquier pregunta sobre asistencia, presentes, ausentes, empleados, etc.
+    `FUENTE PRINCIPAL / AUTORITATIVA — Ejecuta una consulta SELECT de solo lectura contra la base de datos de asistencia (SQL Server).
+Esta es la fuente de verdad para asistencia, presentes, ausentes, empleados, nómina, etc. Ante cualquier discrepancia con jornadas_consulta, prevalece esta base.
 
 ${schemaDescription}`,
     { query: z.string().describe("Consulta SQL SELECT a ejecutar. Solo se permiten SELECT.") },

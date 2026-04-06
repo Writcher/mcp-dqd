@@ -32,6 +32,7 @@ const config = JSON.parse(
 const asistenciaConfig: AsistenciaConfig = {
   proyectos: config.proyectos,
   schema_description: config.schema_description,
+  jornadas_schema_description: config.jornadas_schema_description,
 };
 
 const protrackConfig: ProtrackConfig = {

@@ -13,12 +13,14 @@
     "mssql": "^11.0.0",
     "mysql2": "^3.20.0",
     "openid-client": "^6.8.2",
+    "pg": "^8.20.0",
     "zod": "^3.0.0"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mssql": "^9.0.0",
     "@types/node": "^20.0.0",
+    "@types/pg": "^8.20.0",
     "typescript": "^5.0.0"
   }
 }
