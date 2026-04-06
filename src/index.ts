@@ -16,6 +16,7 @@ import {
 } from "./auth.js";
 import { obtenerModulosUsuario } from "./permisos.js";
 import { registrarModuloAsistencia, type AsistenciaConfig } from "./modules/asistencia.js";
+import { registrarModuloProtrack, type ProtrackConfig } from "./modules/protrack.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,6 +32,10 @@ const config = JSON.parse(
 const asistenciaConfig: AsistenciaConfig = {
   proyectos: config.proyectos,
   schema_description: config.schema_description,
+};
+
+const protrackConfig: ProtrackConfig = {
+  schema_description: config.protrack_schema_description,
 };
 
 // --- Helpers -----------------------------------------------------------------
@@ -175,7 +180,7 @@ const httpServer = http.createServer(async (req, res) => {
 
     // Registrar siempre todos los módulos, pasando si el usuario tiene permiso
     registrarModuloAsistencia(server, usuario, asistenciaConfig, modulos.includes("asistencia"));
-    // Para agregar un módulo nuevo: registrarModuloXxx(server, usuario, config, modulos.includes("xxx"));
+    registrarModuloProtrack(server, usuario, protrackConfig, modulos.includes("protrack"));
 
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     try {
