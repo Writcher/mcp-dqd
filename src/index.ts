@@ -17,6 +17,7 @@ import {
 import { obtenerModulosUsuario } from "./permisos.js";
 import { registrarModuloAsistencia, type AsistenciaConfig } from "./modules/asistencia.js";
 import { registrarModuloProtrack, type ProtrackConfig } from "./modules/protrack.js";
+import { registrarModuloLegajo, type LegajoConfig } from "./modules/legajo.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,6 +38,10 @@ const asistenciaConfig: AsistenciaConfig = {
 
 const protrackConfig: ProtrackConfig = {
   schema_description: config.protrack_schema_description,
+};
+
+const legajoConfig: LegajoConfig = {
+  schema_description: config.legajo_schema_description,
 };
 
 // --- Helpers -----------------------------------------------------------------
@@ -182,6 +187,7 @@ const httpServer = http.createServer(async (req, res) => {
     // Registrar siempre todos los módulos, pasando si el usuario tiene permiso
     registrarModuloAsistencia(server, usuario, asistenciaConfig, modulos.includes("asistencia"));
     registrarModuloProtrack(server, usuario, protrackConfig, modulos.includes("protrack"));
+    registrarModuloLegajo(server, usuario, legajoConfig, modulos.includes("legajo"));
 
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     try {
