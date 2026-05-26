@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx --yes md-to-pdf DOCUMENTACION.md --launch-options '{\"args\":[\"--no-sandbox\"]}')",
+      "WebFetch(domain:api-docs.syncromsp.com)"
     ]
   }
 }

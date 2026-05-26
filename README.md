@@ -70,6 +70,19 @@ npm start
 | `MYSQL_USER` | Usuario de MySQL |
 | `MYSQL_PASSWORD` | Contraseña de MySQL |
 | `MYSQL_DATABASE` | Base de Protrack |
+| `SYNCRO_API_URL` | Base URL de la API de Syncro MSP (ej: `https://<subdominio>.syncromsp.com/api/v1`) |
+| `SYNCRO_API_KEY` | API key (bearer token) del perfil de usuario en Syncro |
+
+## Config
+
+| Key | Descripción |
+|---|---|
+| `proyectos` | Objeto con nombres de proyecto como keys y array con nombre de controles como value |
+| `jornadas_schema_description` | Descripcion de schema PostgreSQL |
+| `protrack_schema_description` | Descripcion de schema MySQL |
+| `legajo_schema_description` | Descripcion de schema legajo |
+| `schema_description` | Descripción de schema accesos |
+| `syncro_schema_description` | Descripción de endpoints GET de la API de Syncro MSP |
 
 ## Scripts
 
@@ -108,6 +121,7 @@ Todas las herramientas de consulta SQL aplican las mismas guardas: la query debe
 - [src/modules/asistencia.ts](src/modules/asistencia.ts) — herramientas de asistencia y jornadas (SQL Server + PostgreSQL)
 - [src/modules/protrack.ts](src/modules/protrack.ts) — herramienta de Protrack (MySQL)
 - [src/modules/legajo.ts](src/modules/legajo.ts) — herramienta de legajo digital (SQL Server)
+- [src/modules/syncro.ts](src/modules/syncro.ts) — herramienta de consulta de solo lectura contra la API REST de Syncro MSP, con rate limiter global de 180 req/min
 - [config.json](config.json) — mapeo de dispositivos por proyecto y descripciones de schema inyectadas en la documentación de cada herramienta
 
 ## Estructura principal
@@ -121,6 +135,7 @@ src/
     asistencia.ts
     protrack.ts
     legajo.ts
+    syncro.ts
 config.json
 package.json
 tsconfig.json

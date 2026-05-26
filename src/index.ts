@@ -18,6 +18,7 @@ import { obtenerModulosUsuario } from "./permisos.js";
 import { registrarModuloAsistencia, type AsistenciaConfig } from "./modules/asistencia.js";
 import { registrarModuloProtrack, type ProtrackConfig } from "./modules/protrack.js";
 import { registrarModuloLegajo, type LegajoConfig } from "./modules/legajo.js";
+import { registrarModuloSyncro, type SyncroConfig } from "./modules/syncro.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,6 +43,10 @@ const protrackConfig: ProtrackConfig = {
 
 const legajoConfig: LegajoConfig = {
   schema_description: config.legajo_schema_description,
+};
+
+const syncroConfig: SyncroConfig = {
+  schema_description: config.syncro_schema_description,
 };
 
 // --- Helpers -----------------------------------------------------------------
@@ -188,6 +193,7 @@ const httpServer = http.createServer(async (req, res) => {
     registrarModuloAsistencia(server, usuario, asistenciaConfig, modulos.includes("asistencia"));
     registrarModuloProtrack(server, usuario, protrackConfig, modulos.includes("protrack"));
     registrarModuloLegajo(server, usuario, legajoConfig, modulos.includes("legajo"));
+    registrarModuloSyncro(server, usuario, syncroConfig, modulos.includes("syncro"));
 
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     try {
