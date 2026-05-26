@@ -19,6 +19,9 @@ import { registrarModuloAsistencia, type AsistenciaConfig } from "./modules/asis
 import { registrarModuloProtrack, type ProtrackConfig } from "./modules/protrack.js";
 import { registrarModuloLegajo, type LegajoConfig } from "./modules/legajo.js";
 import { registrarModuloSyncro, type SyncroConfig } from "./modules/syncro.js";
+import { registrarModuloVentas, type VentasConfig } from "./modules/ventas.js";
+import { registrarModuloTraccar, type TraccarConfig } from "./modules/traccar.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,7 +36,7 @@ const config = JSON.parse(
 
 const asistenciaConfig: AsistenciaConfig = {
   proyectos: config.proyectos,
-  schema_description: config.schema_description,
+  schema_description: config.accesos_schema_description,
   jornadas_schema_description: config.jornadas_schema_description,
 };
 
@@ -47,6 +50,13 @@ const legajoConfig: LegajoConfig = {
 
 const syncroConfig: SyncroConfig = {
   schema_description: config.syncro_schema_description,
+};
+const ventasConfig: VentasConfig = {
+  schema_description: config.ventas_schema_description,
+};
+
+const traccarConfig: TraccarConfig = {
+  schema_description: config.traccar_schema_description,
 };
 
 // --- Helpers -----------------------------------------------------------------
@@ -194,6 +204,8 @@ const httpServer = http.createServer(async (req, res) => {
     registrarModuloProtrack(server, usuario, protrackConfig, modulos.includes("protrack"));
     registrarModuloLegajo(server, usuario, legajoConfig, modulos.includes("legajo"));
     registrarModuloSyncro(server, usuario, syncroConfig, modulos.includes("syncro"));
+    registrarModuloVentas(server, usuario, ventasConfig, modulos.includes("ventas"));
+    registrarModuloTraccar(server, usuario, traccarConfig, modulos.includes("traccar"));
 
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     try {

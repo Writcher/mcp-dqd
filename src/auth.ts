@@ -23,6 +23,13 @@ const authCodes = new Map<string, { email: string; expira: number; codeChallenge
 // DCR: clientes registrados dinámicamente (Claude se registra acá)
 const registeredClients = new Map<string, { redirectUris: string[] }>();
 
+// Tokens de Azure por usuario, para llamar a Business Central a nombre del usuario.
+// En memoria: si el server reinicia el usuario tiene que volver a iniciar sesión
+// (mismo comportamiento que el JWT actual que también se invalida en reinicio).
+const azureTokens = new Map<string, { accessToken: string; refreshToken: string; expiresAt: number }>();
+
+const BC_SCOPE = "https://api.businesscentral.dynamics.com/Financials.ReadWrite.All";
+
 // --- PKCE helpers -----------------------------------------------------------
 
 function base64url(buffer: Uint8Array | ArrayBuffer): string {
@@ -80,7 +87,7 @@ export async function generarUrlAzure(
     client_id: CLIENT_ID,
     response_type: "code",
     redirect_uri: `${BASE_URL}/oauth/callback`,
-    scope: "openid profile email",
+    scope: `openid profile email offline_access ${BC_SCOPE}`,
     state: azureState,
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
@@ -129,7 +136,65 @@ export async function manejarCallback(
   const claims = JSON.parse(Buffer.from(payload, "base64url").toString());
   const email: string = claims.preferred_username ?? claims.email ?? claims.upn;
 
+  if (tokens.access_token && tokens.refresh_token) {
+    azureTokens.set(email.toLowerCase(), {
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt: Date.now() + (tokens.expires_in - 60) * 1000,
+    });
+  }
+
   return { redirectUri: pending.redirectUri, clientState: pending.clientState, email, codeChallenge: pending.clientCodeChallenge };
+}
+
+// --- Token BC (delegado) ----------------------------------------------------
+
+export async function obtenerTokenBC(email: string): Promise<string | null> {
+  const key = email.toLowerCase();
+  const cached = azureTokens.get(key);
+  if (!cached) return null;
+
+  if (cached.expiresAt > Date.now()) return cached.accessToken;
+
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
+    grant_type: "refresh_token",
+    refresh_token: cached.refreshToken,
+    scope: `${BC_SCOPE} offline_access`,
+  });
+
+  const resp = await fetch(
+    `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    }
+  );
+
+  if (!resp.ok) {
+    azureTokens.delete(key);
+    console.log(`[BC-TOKEN] refresh falló para ${email}: ${resp.status}`);
+    return null;
+  }
+
+  const tokens = await resp.json();
+  azureTokens.set(key, {
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token ?? cached.refreshToken,
+    expiresAt: Date.now() + (tokens.expires_in - 60) * 1000,
+  });
+  console.log(`[BC-TOKEN] refresh OK para ${email}`);
+  return tokens.access_token;
+}
+
+export function invalidarTokenBC(email: string): void {
+  const key = email.toLowerCase();
+  const cached = azureTokens.get(key);
+  if (cached) {
+    azureTokens.set(key, { ...cached, expiresAt: 0 });
+  }
 }
 
 // --- Auth codes -------------------------------------------------------------
